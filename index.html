@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoClick Control Panel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-mouse-pointer"></i> AutoClick Control Panel</h1>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Desconectado</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Panel de Configuración -->
+            <div class="config-panel">
+                <h2><i class="fas fa-cog"></i> Configuración</h2>
+                
+                <div class="form-group">
+                    <label for="windowTitle">Título de Ventana:</label>
+                    <input type="text" id="windowTitle" placeholder="Ej: Notepad, Calculator">
+                </div>
+
+                <div class="form-group">
+                    <label for="mode">Modo de Activación:</label>
+                    <select id="mode">
+                        <option value="KEY">Tecla (F1/F2)</option>
+                        <option value="MOUSE">Mouse</option>
+                        <option value="AUTO">Automático</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="interval">Intervalo:</label>
+                    <input type="number" id="interval" min="1" value="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="speedMode">Modo de Velocidad:</label>
+                    <select id="speedMode">
+                        <option value="MS">Milisegundos (MS)</option>
+                        <option value="MC">Microsegundos (MC)</option>
+                        <option value="NN">Nanosegundos (NN)</option>
+                    </select>
+                </div>
+
+                <!-- Configuración de DelayClicks -->
+                <div class="delay-clicks-section">
+                    <h3><i class="fas fa-clock"></i> Configuración de Clicks</h3>
+                    <div class="delay-clicks-container" id="delayClicksContainer">
+                        <!-- Los DelayClicks se generarán dinámicamente aquí -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="addDelayClick">
+                        <i class="fas fa-plus"></i> Agregar Click
+                    </button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="startAutoClick">
+                        <i class="fas fa-play"></i> Iniciar AutoClick
+                    </button>
+                    <button class="btn btn-danger" id="stopAutoClick" disabled>
+                        <i class="fas fa-stop"></i> Detener
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Monitoreo -->
+            <div class="monitor-panel">
+                <h2><i class="fas fa-chart-line"></i> Monitoreo</h2>
+                
+                <!-- Contador de Clicks -->
+                <div class="click-counter">
+                    <div class="counter-display">
+                        <span class="counter-number" id="clickCounter">0</span>
+                        <span class="counter-label">Clicks Realizados</span>
+                    </div>
+                    <button class="btn btn-warning reset-btn" id="resetCounter">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Prueba de Velocidad -->
+                <div class="speed-test">
+                    <h3><i class="fas fa-tachometer-alt"></i> Prueba de Velocidad</h3>
+                    <div class="speed-controls">
+                        <input type="number" id="testClicks" min="1" max="1000" value="10" placeholder="Número de clicks">
+                        <button class="btn btn-info" id="speedTest">
+                            <i class="fas fa-stopwatch"></i> Probar Velocidad
+                        </button>
+                    </div>
+                    <div class="speed-results" id="speedResults">
+                        <div class="speed-metric">
+                            <span class="metric-label">Tiempo Total:</span>
+                            <span class="metric-value" id="totalTime">-</span>
+                        </div>
+                        <div class="speed-metric">
+                            <span class="metric-label">Clicks/Segundo:</span>
+                            <span class="metric-value" id="clicksPerSecond">-</span>
+                        </div>
+                        <div class="speed-metric">
+                            <span class="metric-label">Intervalo Real:</span>
+                            <span class="metric-value" id="realInterval">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log de Actividad -->
+                <div class="activity-log">
+                    <h3><i class="fas fa-list"></i> Log de Actividad</h3>
+                    <div class="log-container" id="logContainer">
+                        <!-- Los logs se mostrarán aquí -->
+                    </div>
+                    <button class="btn btn-secondary clear-log" id="clearLog">
+                        <i class="fas fa-trash"></i> Limpiar Log
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Ayuda -->
+        <div class="help-panel">
+            <h3><i class="fas fa-question-circle"></i> Atajos de Teclado</h3>
+            <div class="shortcuts">
+                <div class="shortcut">
+                    <kbd>F1</kbd> <span>Iniciar AutoClick (modo KEY/AUTO)</span>
+                </div>
+                <div class="shortcut">
+                    <kbd>F2</kbd> <span>Detener AutoClick</span>
+                </div>
+                <div class="shortcut">
+                    <kbd>F3</kbd> <span>Guardar coordenadas del mouse</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
