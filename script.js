@@ -4,9 +4,7 @@ class AutoClickApp {
         this.clickCounter = 0;
         this.isActive = false;
         this.delayClicks = [];
-        this.speedTestStartTime = null;
-        this.speedTestClicks = 0;
-        this.lastClickTime = null;
+
         this.isLoading = true; // Flag to prevent auto-stop during initialization
         
         this.initializeElements();
@@ -14,6 +12,7 @@ class AutoClickApp {
         this.addInitialDelayClick();
         this.attachEventListeners(); // Attach after loading to prevent false triggers
         this.updateStatus('disconnected');
+        this.detectActiveWindow(); // Auto-detect current window on startup
         
         this.isLoading = false; // Now ready for normal operation
         
@@ -35,21 +34,19 @@ class AutoClickApp {
         this.stopBtn = document.getElementById('stopAutoClick');
         this.addDelayClickBtn = document.getElementById('addDelayClick');
         this.resetCounterBtn = document.getElementById('resetCounter');
-        this.speedTestBtn = document.getElementById('speedTest');
-        this.clearLogBtn = document.getElementById('clearLog');
+        this.directClickBtn = document.getElementById('directClickBtn');
+        this.detectWindowBtn = document.getElementById('detectWindow');
         
         // Display elements
         this.clickCounterDisplay = document.getElementById('clickCounter');
         this.statusIndicator = document.getElementById('statusIndicator');
         this.delayClicksContainer = document.getElementById('delayClicksContainer');
-        this.logContainer = document.getElementById('logContainer');
         this.toastContainer = document.getElementById('toastContainer');
         
-        // Speed test elements
-        this.testClicksInput = document.getElementById('testClicks');
-        this.totalTimeDisplay = document.getElementById('totalTime');
-        this.clicksPerSecondDisplay = document.getElementById('clicksPerSecond');
-        this.realIntervalDisplay = document.getElementById('realInterval');
+        // Debug: Check if critical elements exist
+        console.log('Direct Click Button:', this.directClickBtn);
+        console.log('Click Counter Display:', this.clickCounterDisplay);
+        console.log('Detect Window Button:', this.detectWindowBtn);
     }
 
     attachEventListeners() {
@@ -57,8 +54,8 @@ class AutoClickApp {
         this.stopBtn.addEventListener('click', () => this.stopAutoClick());
         this.addDelayClickBtn.addEventListener('click', () => this.addDelayClick());
         this.resetCounterBtn.addEventListener('click', () => this.resetCounter());
-        this.speedTestBtn.addEventListener('click', () => this.runSpeedTest());
-        this.clearLogBtn.addEventListener('click', () => this.clearLog());
+        this.directClickBtn.addEventListener('click', () => this.executeDirectClick());
+        this.detectWindowBtn.addEventListener('click', () => this.detectActiveWindow());
         
         // Auto-stop and save on configuration changes
         [this.windowTitleInput, this.modeSelect, this.intervalInput, this.speedModeSelect].forEach(element => {
@@ -139,7 +136,7 @@ class AutoClickApp {
         };
 
         try {
-            this.log('Configuring AutoClick (listeners activated)...', 'info');
+
             this.updateStatus('connecting');
             
             const response = await fetch(`${this.API_BASE_URL}/autoclick/start`, {
@@ -168,7 +165,7 @@ class AutoClickApp {
                     this.warnAboutTimingLimitations();
                 }
                 
-                this.log(`AutoClick configured: ${statusMessage}`, 'success');
+
                 this.showToast('Listeners activated', 'success');
                 
                 // Only simulate clicks if AUTO mode
@@ -179,14 +176,13 @@ class AutoClickApp {
                 throw new Error(`HTTP Error: ${response.status}`);
             }
         } catch (error) {
-            this.log(`Error configuring AutoClick: ${error.message}`, 'error');
+
             this.showToast('Error connecting to API', 'error');
             this.updateStatus('error');
         }
     }
 
     async stopAutoClick() {
-        this.log('Manual stop requested', 'info');
         
         // Send stop configuration to API
         await this.sendStopConfiguration();
@@ -194,7 +190,6 @@ class AutoClickApp {
         // Stop local execution
         this.forceStop();
         
-        this.log('AutoClick stopped - Listeners deactivated', 'warning');
         this.showToast('AutoClick stopped', 'warning');
     }
 
@@ -219,7 +214,6 @@ class AutoClickApp {
             }, actualInterval);
         }
         
-        this.log(`Started ${mode} timing: ${actualInterval}ms interval`, 'info');
     }
 
     warnAboutTimingLimitations() {
@@ -228,13 +222,10 @@ class AutoClickApp {
         
         if (mode === 'NN' && interval < 1000000) {
             this.showToast('⚠️ Browser cannot simulate nanosecond precision. Monitoring is approximate', 'warning');
-            this.log('WARNING: JavaScript cannot achieve nanosecond timing precision', 'warning');
         } else if (mode === 'MC' && interval < 1000) {
             this.showToast('⚠️ Browser timing limited to ~1ms precision. Monitoring is approximate', 'warning');
-            this.log('WARNING: JavaScript timing limited to millisecond precision', 'warning');
         } else if (interval < 4) {
             this.showToast('⚠️ Browser minimum timing is ~4ms. Very fast intervals are approximate', 'warning');
-            this.log('WARNING: Browser setTimeout minimum is ~4ms', 'warning');
         }
     }
 
@@ -256,7 +247,6 @@ class AutoClickApp {
         };
         
         requestAnimationFrame(tick);
-        this.log(`Using high-precision timing for ${targetInterval}ms intervals`, 'warning');
     }
 
     simulateDelayClickExecution(clickCount, onComplete) {
@@ -274,7 +264,6 @@ class AutoClickApp {
             
             if (executed >= clickCount) {
                 clearInterval(clickInterval);
-                this.log(`${clickCount} clicks executed`, 'success');
                 if (onComplete) onComplete();
             }
         }, interval);
@@ -285,13 +274,11 @@ class AutoClickApp {
         const delayClicks = this.getDelayClicksData();
         let totalClicks = delayClicks.reduce((sum, dc) => sum + dc.count, 0);
         
-        this.log(`Executing manual sequence: ${totalClicks} total clicks`, 'info');
         
         let delayIndex = 0;
         
         const executeNextDelayClick = () => {
             if (delayIndex >= delayClicks.length) {
-                this.log('Click sequence completed', 'success');
                 return;
             }
             
@@ -320,17 +307,16 @@ class AutoClickApp {
         }
         
         // Log the actual timing being used
-        this.log(`Timing mode: ${mode} | Input: ${interval} | Browser interval: ${actualInterval}ms`, 'info');
         
         return actualInterval;
     }
 
     incrementClickCounter() {
+        console.log('incrementClickCounter called, current value:', this.clickCounter);
         this.clickCounter++;
+        console.log('incremented to:', this.clickCounter);
+        console.log('clickCounterDisplay element:', this.clickCounterDisplay);
         this.updateClickCounterDisplay();
-        
-        // Track timing precision
-        this.trackTimingPrecision();
     }
 
     trackTimingPrecision() {
@@ -343,78 +329,126 @@ class AutoClickApp {
             // Update timing stats every 10 clicks
             if (this.clickCounter % 10 === 0) {
                 const precision = ((1 - (deviation / expectedInterval)) * 100).toFixed(1);
-                this.log(`Timing precision: ${precision}% (Expected: ${expectedInterval.toFixed(3)}ms, Actual: ${actualInterval.toFixed(3)}ms)`, 'info');
                 
                 // Update real interval display if speed test results exist
-                if (this.realIntervalDisplay) {
-                    this.realIntervalDisplay.textContent = `${actualInterval.toFixed(3)} ms`;
-                }
+
             }
         }
         this.lastClickTime = now;
     }
 
     updateClickCounterDisplay() {
-        this.clickCounterDisplay.textContent = this.clickCounter.toLocaleString();
+        console.log('updateClickCounterDisplay called with counter:', this.clickCounter);
         
-        // Animate counter with color flash for better visual feedback
-        this.clickCounterDisplay.style.transform = 'scale(1.1)';
-        this.clickCounterDisplay.style.color = 'var(--yellow)';
-        
-        setTimeout(() => {
-            this.clickCounterDisplay.style.transform = 'scale(1)';
-            this.clickCounterDisplay.style.color = 'var(--cyan)';
-        }, 150);
+        if (this.clickCounterDisplay) {
+            this.clickCounterDisplay.textContent = this.clickCounter.toLocaleString();
+            console.log('Updated display to:', this.clickCounterDisplay.textContent);
+            
+            // Animate counter with color flash for better visual feedback
+            this.clickCounterDisplay.style.transform = 'scale(1.1)';
+            this.clickCounterDisplay.style.color = 'var(--yellow)';
+            
+            setTimeout(() => {
+                this.clickCounterDisplay.style.transform = 'scale(1)';
+                this.clickCounterDisplay.style.color = 'var(--cyan)';
+            }, 150);
+        } else {
+            console.log('clickCounterDisplay element not found!');
+        }
     }
 
     resetCounter() {
         this.clickCounter = 0;
         this.updateClickCounterDisplay();
-        this.log('Counter reset', 'info');
         this.showToast('Counter reset', 'info');
     }
 
-    async runSpeedTest() {
-        const testClicks = parseInt(this.testClicksInput.value) || 10;
-        const interval = parseInt(this.intervalInput.value) || 100;
-        const mode = this.speedModeSelect.value;
+    async executeDirectClick() {
+        console.log('executeDirectClick called');
+        console.log('directClickBtn element:', this.directClickBtn);
+        console.log('clickCounter before increment:', this.clickCounter);
         
-        this.speedTestBtn.disabled = true;
-        this.speedTestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-        this.log(`Starting speed test: ${testClicks} clicks`, 'info');
-        
-        let actualInterval = interval;
-        if (mode === 'MC') {
-            actualInterval = Math.max(1, interval / 1000);
-        } else if (mode === 'NN') {
-            actualInterval = Math.max(1, interval / 1000000);
-        }
-        
-        const startTime = performance.now();
-        let clickCount = 0;
-        
-        const testInterval = setInterval(() => {
-            clickCount++;
-            this.incrementClickCounter();
-            
-            if (clickCount >= testClicks) {
-                clearInterval(testInterval);
-                const endTime = performance.now();
-                const totalTime = endTime - startTime;
-                const clicksPerSecond = (testClicks / (totalTime / 1000)).toFixed(2);
-                const realInterval = (totalTime / testClicks).toFixed(2);
-                
-                this.totalTimeDisplay.textContent = `${totalTime.toFixed(2)} ms`;
-                this.clicksPerSecondDisplay.textContent = clicksPerSecond;
-                this.realIntervalDisplay.textContent = `${realInterval} ms`;
-                
-                this.speedTestBtn.disabled = false;
-                this.speedTestBtn.innerHTML = '<i class="fas fa-stopwatch"></i> Test Speed';
-                
-                this.log(`Test completed: ${clicksPerSecond} clicks/s`, 'success');
-                this.showToast('Speed test completed', 'success');
+        try {
+            if (this.directClickBtn) {
+                this.directClickBtn.disabled = true;
+                this.directClickBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
             }
-        }, actualInterval);
+            
+            // Always increment counter for UI feedback
+            this.incrementClickCounter();
+            console.log('clickCounter after increment:', this.clickCounter);
+            
+            const autoClickData = {
+                title: this.windowTitleInput.value.trim() || "Default Window",
+                mode: "MANUAL", // Always manual for direct clicks
+                interval: parseInt(this.intervalInput.value) || 100,
+                speedMode: this.speedModeSelect.value,
+                delayClicks: this.getDelayClicksData()
+            };
+
+            try {
+                const response = await fetch(`${this.API_BASE_URL}/autoclick/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(autoClickData)
+                });
+
+                if (response.ok) {
+                    this.updateStatus('connected');
+                    this.showToast('Click executed successfully via API', 'success');
+                } else {
+                    this.updateStatus('error');
+                    this.showToast('API call failed, but click counted', 'warning');
+                }
+            } catch (apiError) {
+                // API not available, but still count the click
+                this.updateStatus('error');
+                this.showToast('API not available, click counted locally', 'warning');
+            }
+            
+        } catch (error) {
+            console.error('Error executing click:', error);
+            this.showToast('Error in click execution', 'error');
+        } finally {
+            this.directClickBtn.disabled = false;
+            this.directClickBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i> Execute Click Now';
+        }
+    }
+
+    async detectActiveWindow() {
+        try {
+            if (this.detectWindowBtn) {
+                this.detectWindowBtn.disabled = true;
+                this.detectWindowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+            }
+            
+            // Get the actual window title from the browser
+            const activeWindow = document.title + " - Brave";  // This gets "AutoClick Control Panel - Brave"
+            
+            this.windowTitleInput.value = activeWindow;
+            
+            // Save configuration but don't trigger auto-stop
+            this.saveConfiguration();
+            
+            if (this.detectWindowBtn) {
+                this.showToast(`Window detected: ${activeWindow}`, 'success');
+            }
+            
+        } catch (error) {
+            console.error('Error detecting window:', error);
+            if (this.detectWindowBtn) {
+                this.showToast('Failed to detect window', 'error');
+            }
+        } finally {
+            if (this.detectWindowBtn) {
+                setTimeout(() => {
+                    this.detectWindowBtn.disabled = false;
+                    this.detectWindowBtn.innerHTML = '<i class="fas fa-crosshairs"></i> Auto-detect';
+                }, 1000);
+            }
+        }
     }
 
     updateStatus(status) {
@@ -448,28 +482,7 @@ class AutoClickApp {
         }
     }
 
-    log(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = document.createElement('div');
-        logEntry.className = `log-entry ${type}`;
-        logEntry.innerHTML = `
-            <span class="log-timestamp">[${timestamp}]</span>
-            ${message}
-        `;
-        
-        this.logContainer.appendChild(logEntry);
-        this.logContainer.scrollTop = this.logContainer.scrollHeight;
-        
-        // Limit log entries
-        while (this.logContainer.children.length > 100) {
-            this.logContainer.removeChild(this.logContainer.firstChild);
-        }
-    }
 
-    clearLog() {
-        this.logContainer.innerHTML = '';
-        this.showToast('Log cleared', 'info');
-    }
 
     showToast(message, type = 'info') {
         const toast = document.createElement('div');
@@ -506,7 +519,6 @@ class AutoClickApp {
                     // If already active and KEY mode, execute clicks
                     const mode = this.modeSelect.value;
                     if (mode === 'KEY') {
-                        this.log('F1 pressed - Executing click sequence', 'info');
                         this.simulateManualTrigger();
                     }
                 }
@@ -519,7 +531,6 @@ class AutoClickApp {
                 break;
             case 'F3':
                 event.preventDefault();
-                this.log('F3 pressed - Mouse coordinates saved', 'success');
                 this.showToast('Coordinates saved', 'info');
                 break;
         }
@@ -534,7 +545,6 @@ class AutoClickApp {
         
         // If AutoClick is active, stop it and send empty config to API
         if (this.isActive) {
-            this.log('Configuration changed - Stopping AutoClick automatically', 'warning');
             this.showToast('Configuration changed - AutoClick stopped. Press Start to apply new settings', 'warning');
             
             // Send empty configuration to stop API execution
@@ -581,9 +591,7 @@ class AutoClickApp {
                 body: JSON.stringify(stopConfig)
             });
 
-            this.log('Stop configuration sent to API', 'info');
         } catch (error) {
-            this.log(`Error sending stop configuration: ${error.message}`, 'error');
         }
     }
 
@@ -640,9 +648,7 @@ class AutoClickApp {
                     this.addInitialDelayClick();
                 }
                 
-                this.log('Configuration loaded', 'success');
             } catch (error) {
-                this.log('Error loading configuration', 'error');
                 this.addInitialDelayClick();
             }
         }

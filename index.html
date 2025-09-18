@@ -24,7 +24,12 @@
                 
                 <div class="form-group">
                     <label for="windowTitle">Window Title:</label>
-                    <input type="text" id="windowTitle" placeholder="e.g: Notepad, Calculator">
+                    <div class="input-group">
+                        <input type="text" id="windowTitle" placeholder="e.g: Notepad, Calculator">
+                        <button class="btn btn-secondary" id="detectWindow">
+                            <i class="fas fa-crosshairs"></i> Auto-detect
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -71,54 +76,25 @@
                 </div>
             </div>
 
-            <!-- Monitoring Panel -->
-            <div class="monitor-panel">
-                <h2><i class="fas fa-chart-line"></i> Monitoring</h2>
+            <!-- Direct Click Panel -->
+            <div class="direct-click-panel">
+                <h2><i class="fas fa-mouse"></i> Direct Click</h2>
                 
                 <!-- Click Counter -->
                 <div class="click-counter">
                     <div class="counter-display">
                         <span class="counter-number" id="clickCounter">0</span>
-                        <span class="counter-label">Clicks Performed</span>
+                        <span class="counter-label">Clicks Executed</span>
                     </div>
                     <button class="btn btn-warning reset-btn" id="resetCounter">
                         <i class="fas fa-undo"></i> Reset
                     </button>
                 </div>
 
-                <!-- Speed Test -->
-                <div class="speed-test">
-                    <h3><i class="fas fa-tachometer-alt"></i> Speed Test</h3>
-                    <div class="speed-controls">
-                        <input type="number" id="testClicks" min="1" max="1000" value="10" placeholder="Number of clicks">
-                        <button class="btn btn-info" id="speedTest">
-                            <i class="fas fa-stopwatch"></i> Test Speed
-                        </button>
-                    </div>
-                    <div class="speed-results" id="speedResults">
-                        <div class="speed-metric">
-                            <span class="metric-label">Total Time:</span>
-                            <span class="metric-value" id="totalTime">-</span>
-                        </div>
-                        <div class="speed-metric">
-                            <span class="metric-label">Clicks/Second:</span>
-                            <span class="metric-value" id="clicksPerSecond">-</span>
-                        </div>
-                        <div class="speed-metric">
-                            <span class="metric-label">Real Interval:</span>
-                            <span class="metric-value" id="realInterval">-</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Activity Log -->
-                <div class="activity-log">
-                    <h3><i class="fas fa-list"></i> Activity Log</h3>
-                    <div class="log-container" id="logContainer">
-                        <!-- Logs will be displayed here -->
-                    </div>
-                    <button class="btn btn-secondary clear-log" id="clearLog">
-                        <i class="fas fa-trash"></i> Clear Log
+                <!-- Direct Click Button -->
+                <div class="direct-click-controls">
+                    <button class="btn btn-success btn-large" id="directClickBtn">
+                        <i class="fas fa-mouse-pointer"></i> Execute Click Now
                     </button>
                 </div>
             </div>
