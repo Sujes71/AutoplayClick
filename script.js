@@ -6,6 +6,7 @@ class AutoClickApp {
         this.delayClicks = [];
         this.speedTestStartTime = null;
         this.speedTestClicks = 0;
+        this.lastClickTime = null;
         this.isLoading = true; // Flag to prevent auto-stop during initialization
         
         this.initializeElements();
@@ -164,7 +165,7 @@ class AutoClickApp {
                     statusMessage = 'Click with mouse to execute automatic clicks';
                 } else if (mode === 'AUTO') {
                     statusMessage = 'Automatic mode started - executing clicks continuously';
-                    this.startAutomaticClickSimulation();
+                    this.warnAboutTimingLimitations();
                 }
                 
                 this.log(`AutoClick configured: ${statusMessage}`, 'success');
@@ -202,21 +203,60 @@ class AutoClickApp {
             clearInterval(this.clickCountingInterval);
         }
         
+        const actualInterval = this.getActualInterval();
+        const mode = this.speedModeSelect.value;
+        
+        // Use different timing strategies based on speed
+        if (actualInterval < 4) {
+            // For very fast intervals, use high-precision timing
+            this.usePrecisionTiming(actualInterval);
+        } else {
+            // For normal intervals, use standard setTimeout
+            this.clickCountingInterval = setInterval(() => {
+                if (this.isActive) {
+                    this.incrementClickCounter();
+                }
+            }, actualInterval);
+        }
+        
+        this.log(`Started ${mode} timing: ${actualInterval}ms interval`, 'info');
+    }
+
+    warnAboutTimingLimitations() {
         const interval = parseInt(this.intervalInput.value) || 100;
         const mode = this.speedModeSelect.value;
         
-        let actualInterval = interval;
-        if (mode === 'MC') {
-            actualInterval = Math.max(1, interval / 1000); // Microseconds to ms
-        } else if (mode === 'NN') {
-            actualInterval = Math.max(1, interval / 1000000); // Nanoseconds to ms
+        if (mode === 'NN' && interval < 1000000) {
+            this.showToast('⚠️ Browser cannot simulate nanosecond precision. Monitoring is approximate', 'warning');
+            this.log('WARNING: JavaScript cannot achieve nanosecond timing precision', 'warning');
+        } else if (mode === 'MC' && interval < 1000) {
+            this.showToast('⚠️ Browser timing limited to ~1ms precision. Monitoring is approximate', 'warning');
+            this.log('WARNING: JavaScript timing limited to millisecond precision', 'warning');
+        } else if (interval < 4) {
+            this.showToast('⚠️ Browser minimum timing is ~4ms. Very fast intervals are approximate', 'warning');
+            this.log('WARNING: Browser setTimeout minimum is ~4ms', 'warning');
         }
-        
-        this.clickCountingInterval = setInterval(() => {
-            if (this.isActive) {
+    }
+
+    usePrecisionTiming(targetInterval) {
+        let lastTime = performance.now();
+        const tick = () => {
+            if (!this.isActive) return;
+            
+            const currentTime = performance.now();
+            const elapsed = currentTime - lastTime;
+            
+            if (elapsed >= targetInterval) {
                 this.incrementClickCounter();
+                lastTime = currentTime;
             }
-        }, actualInterval);
+            
+            // Use requestAnimationFrame for smoother timing
+            requestAnimationFrame(tick);
+        };
+        
+        requestAnimationFrame(tick);
+        this.log(`Using high-precision timing for ${targetInterval}ms intervals`, 'warning');
     }
 
     simulateDelayClickExecution(clickCount, onComplete) {
@@ -274,10 +314,13 @@ class AutoClickApp {
         
         let actualInterval = interval;
         if (mode === 'MC') {
-            actualInterval = Math.max(1, interval / 1000); // Microseconds to ms
+            actualInterval = Math.max(0.001, interval / 1000); // Microseconds to ms
         } else if (mode === 'NN') {
-            actualInterval = Math.max(1, interval / 1000000); // Nanoseconds to ms
+            actualInterval = Math.max(0.000001, interval / 1000000); // Nanoseconds to ms
         }
+        
+        // Log the actual timing being used
+        this.log(`Timing mode: ${mode} | Input: ${interval} | Browser interval: ${actualInterval}ms`, 'info');
         
         return actualInterval;
     }
@@ -285,6 +328,30 @@ class AutoClickApp {
     incrementClickCounter() {
         this.clickCounter++;
         this.updateClickCounterDisplay();
+        
+        // Track timing precision
+        this.trackTimingPrecision();
+    }
+
+    trackTimingPrecision() {
+        const now = performance.now();
+        if (this.lastClickTime) {
+            const actualInterval = now - this.lastClickTime;
+            const expectedInterval = this.getActualInterval();
+            const deviation = Math.abs(actualInterval - expectedInterval);
+            
+            // Update timing stats every 10 clicks
+            if (this.clickCounter % 10 === 0) {
+                const precision = ((1 - (deviation / expectedInterval)) * 100).toFixed(1);
+                this.log(`Timing precision: ${precision}% (Expected: ${expectedInterval.toFixed(3)}ms, Actual: ${actualInterval.toFixed(3)}ms)`, 'info');
+                
+                // Update real interval display if speed test results exist
+                if (this.realIntervalDisplay) {
+                    this.realIntervalDisplay.textContent = `${actualInterval.toFixed(3)} ms`;
+                }
+            }
+        }
+        this.lastClickTime = now;
     }
 
     updateClickCounterDisplay() {
@@ -526,11 +593,14 @@ class AutoClickApp {
         this.startBtn.disabled = false;
         this.stopBtn.disabled = true;
         
-        // Clear all intervals
+        // Clear all intervals and reset timing tracking
         if (this.clickCountingInterval) {
             clearInterval(this.clickCountingInterval);
             this.clickCountingInterval = null;
         }
+        
+        // Reset timing tracking
+        this.lastClickTime = null;
     }
 
     saveConfiguration() {
