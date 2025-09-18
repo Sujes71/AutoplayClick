@@ -208,6 +208,30 @@ input:focus, select:focus {
     background: #b02826;
 }
 
+/* Disabled button states */
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.btn:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    background-color: inherit !important;
+}
+
+.btn-primary:disabled {
+    background: var(--base01);
+    color: var(--base00);
+}
+
+.btn-danger:disabled {
+    background: var(--base01);
+    color: var(--base00);
+}
+
 .action-buttons {
     display: flex;
     gap: 10px;

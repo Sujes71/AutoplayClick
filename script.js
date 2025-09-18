@@ -57,6 +57,8 @@ class AutoClickApp {
         
         // Ensure we're not in active state initially
         this.isActive = false;
+        
+        console.log('Initial state - Start button disabled:', this.startBtn?.disabled, 'Stop button disabled:', this.stopBtn?.disabled);
     }
 
     attachEventListeners() {
@@ -162,6 +164,7 @@ class AutoClickApp {
                 this.updateStatus('connected');
                 this.startBtn.disabled = true;
                 this.stopBtn.disabled = false;
+                console.log('Started - Start button disabled:', this.startBtn.disabled, 'Stop button disabled:', this.stopBtn.disabled);
                 
                 const mode = this.modeSelect.value;
                 let statusMessage = '';
@@ -610,6 +613,7 @@ class AutoClickApp {
         this.updateStatus('disconnected');
         this.startBtn.disabled = false;
         this.stopBtn.disabled = true;
+        console.log('Stopped - Start button disabled:', this.startBtn.disabled, 'Stop button disabled:', this.stopBtn.disabled);
         
         // Clear all intervals and reset timing tracking
         if (this.clickCountingInterval) {
