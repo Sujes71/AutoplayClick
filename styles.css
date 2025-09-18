@@ -245,8 +245,24 @@ body {
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, var(--base01), var(--base00));
-    color: var(--base1);
+    background: linear-gradient(135deg, var(--green), var(--cyan));
+    color: var(--base3);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, var(--cyan), var(--green));
+}
+
+.btn-restart-required {
+    background: linear-gradient(135deg, var(--orange), var(--yellow)) !important;
+    color: var(--base03) !important;
+    animation: pulse-restart 1.5s infinite;
+}
+
+@keyframes pulse-restart {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 .btn:disabled {

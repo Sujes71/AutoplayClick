@@ -6,12 +6,15 @@ class AutoClickApp {
         this.delayClicks = [];
         this.speedTestStartTime = null;
         this.speedTestClicks = 0;
+        this.isLoading = true; // Flag to prevent auto-stop during initialization
         
         this.initializeElements();
-        this.attachEventListeners();
         this.loadConfiguration();
         this.addInitialDelayClick();
+        this.attachEventListeners(); // Attach after loading to prevent false triggers
         this.updateStatus('disconnected');
+        
+        this.isLoading = false; // Now ready for normal operation
         
         // Auto-save configuration
         this.autoSaveInterval = setInterval(() => {
@@ -56,9 +59,9 @@ class AutoClickApp {
         this.speedTestBtn.addEventListener('click', () => this.runSpeedTest());
         this.clearLogBtn.addEventListener('click', () => this.clearLog());
         
-        // Auto-save on input changes
+        // Auto-stop and save on configuration changes
         [this.windowTitleInput, this.modeSelect, this.intervalInput, this.speedModeSelect].forEach(element => {
-            element.addEventListener('change', () => this.saveConfiguration());
+            element.addEventListener('change', () => this.onConfigurationChange());
         });
         
         // Keyboard shortcuts
@@ -85,7 +88,7 @@ class AutoClickApp {
         deleteBtn.addEventListener('click', () => {
             if (this.delayClicksContainer.children.length > 1) {
                 delayClickItem.remove();
-                this.saveConfiguration();
+                this.onConfigurationChange();
                 this.showToast('DelayClick removed', 'success');
             } else {
                 this.showToast('Must keep at least one DelayClick', 'warning');
@@ -94,9 +97,10 @@ class AutoClickApp {
         
         const inputs = delayClickItem.querySelectorAll('input');
         inputs.forEach(input => {
-            input.addEventListener('change', () => this.saveConfiguration());
+            input.addEventListener('change', () => this.onConfigurationChange());
         });
         
+        // Only save configuration, don't trigger stop for programmatic additions
         this.saveConfiguration();
     }
 
@@ -180,19 +184,17 @@ class AutoClickApp {
         }
     }
 
-    stopAutoClick() {
-        this.isActive = false;
-        this.updateStatus('disconnected');
-        this.startBtn.disabled = false;
-        this.stopBtn.disabled = true;
+    async stopAutoClick() {
+        this.log('Manual stop requested', 'info');
+        
+        // Send stop configuration to API
+        await this.sendStopConfiguration();
+        
+        // Stop local execution
+        this.forceStop();
+        
         this.log('AutoClick stopped - Listeners deactivated', 'warning');
         this.showToast('AutoClick stopped', 'warning');
-        
-        // Clear all intervals
-        if (this.clickCountingInterval) {
-            clearInterval(this.clickCountingInterval);
-            this.clickCountingInterval = null;
-        }
     }
 
     simulateAutomaticMode() {
@@ -461,6 +463,81 @@ class AutoClickApp {
                 this.log('F3 pressed - Mouse coordinates saved', 'success');
                 this.showToast('Coordinates saved', 'info');
                 break;
+        }
+    }
+
+    onConfigurationChange() {
+        // Don't trigger auto-stop during initialization
+        if (this.isLoading) {
+            this.saveConfiguration();
+            return;
+        }
+        
+        // If AutoClick is active, stop it and send empty config to API
+        if (this.isActive) {
+            this.log('Configuration changed - Stopping AutoClick automatically', 'warning');
+            this.showToast('Configuration changed - AutoClick stopped. Press Start to apply new settings', 'warning');
+            
+            // Send empty configuration to stop API execution
+            this.sendStopConfiguration();
+            
+            // Stop local execution
+            this.forceStop();
+            
+            // Add visual indicator that restart is needed
+            this.showRestartRequired();
+        }
+        
+        // Save the new configuration
+        this.saveConfiguration();
+    }
+
+    showRestartRequired() {
+        this.startBtn.innerHTML = '<i class="fas fa-sync"></i> Restart Required';
+        this.startBtn.classList.add('btn-restart-required');
+        
+        // Remove the indicator after a few seconds
+        setTimeout(() => {
+            this.startBtn.innerHTML = '<i class="fas fa-play"></i> Start AutoClick';
+            this.startBtn.classList.remove('btn-restart-required');
+        }, 3000);
+    }
+
+    async sendStopConfiguration() {
+        try {
+            // Send a configuration with 0 delay and 0 clicks to effectively stop execution
+            const stopConfig = {
+                title: this.windowTitleInput.value.trim() || "dummy",
+                mode: this.modeSelect.value,
+                interval: 1,
+                speedMode: "MS",
+                delayClicks: [{ delay: 0, count: 0 }]
+            };
+
+            await fetch(`${this.API_BASE_URL}/autoclick/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(stopConfig)
+            });
+
+            this.log('Stop configuration sent to API', 'info');
+        } catch (error) {
+            this.log(`Error sending stop configuration: ${error.message}`, 'error');
+        }
+    }
+
+    forceStop() {
+        this.isActive = false;
+        this.updateStatus('disconnected');
+        this.startBtn.disabled = false;
+        this.stopBtn.disabled = true;
+        
+        // Clear all intervals
+        if (this.clickCountingInterval) {
+            clearInterval(this.clickCountingInterval);
+            this.clickCountingInterval = null;
         }
     }
 
