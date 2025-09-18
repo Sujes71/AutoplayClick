@@ -172,7 +172,7 @@ class AutoClickApp {
                 
                 // Only simulate clicks if AUTO mode
                 if (mode === 'AUTO') {
-                    this.simulateAutomaticMode();
+                    this.simulateClickCounting();
                 }
             } else {
                 throw new Error(`HTTP Error: ${response.status}`);
@@ -197,87 +197,47 @@ class AutoClickApp {
         this.showToast('AutoClick stopped', 'warning');
     }
 
-    simulateAutomaticMode() {
+    simulateClickCounting() {
         if (this.clickCountingInterval) {
             clearInterval(this.clickCountingInterval);
         }
         
-        const delayClicks = this.getDelayClicksData();
-        let delayIndex = 0;
+        const interval = parseInt(this.intervalInput.value) || 100;
+        const mode = this.speedModeSelect.value;
         
-        const executeDelayClickCycle = () => {
-            if (!this.isActive) return;
-            
-            const currentDelayClick = delayClicks[delayIndex];
-            this.log(`Executing DelayClick ${delayIndex + 1}: ${currentDelayClick.count} clicks with ${currentDelayClick.delay}ms delay`, 'info');
-            
-            // Wait for the delay FIRST
-            setTimeout(() => {
-                if (!this.isActive) return;
-                
-                // Execute the exact number of clicks with proper interval
-                this.simulateRealisticDelayClickExecution(currentDelayClick.count, () => {
-                    delayIndex = (delayIndex + 1) % delayClicks.length;
-                    // If we return to the beginning, it's a complete cycle
-                    if (delayIndex === 0) {
-                        this.log('DelayClicks cycle completed, restarting...', 'info');
-                    }
-                    executeDelayClickCycle();
-                });
-            }, currentDelayClick.delay);
-        };
-        
-        executeDelayClickCycle();
-    }
-
-    simulateRealisticDelayClickExecution(clickCount, onComplete) {
-        // If count is 0, skip execution
-        if (clickCount === 0) {
-            this.log(`DelayClick with 0 count - skipping execution`, 'info');
-            if (onComplete) onComplete();
-            return;
+        let actualInterval = interval;
+        if (mode === 'MC') {
+            actualInterval = Math.max(1, interval / 1000); // Microseconds to ms
+        } else if (mode === 'NN') {
+            actualInterval = Math.max(1, interval / 1000000); // Nanoseconds to ms
         }
         
+        this.clickCountingInterval = setInterval(() => {
+            if (this.isActive) {
+                this.incrementClickCounter();
+            }
+        }, actualInterval);
+    }
+
+    simulateDelayClickExecution(clickCount, onComplete) {
         const interval = this.getActualInterval();
         let executed = 0;
         
-        const speedMode = this.speedModeSelect.value;
-        this.log(`Starting ${clickCount} clicks with ${interval}ms interval (${speedMode} mode)`, 'info');
-        
-        const executeClick = () => {
-            if (!this.isActive || executed >= clickCount) {
-                if (executed >= clickCount) {
-                    this.log(`✓ DelayClick completed: ${executed}/${clickCount} clicks executed`, 'success');
-                }
-                if (onComplete) onComplete();
+        const clickInterval = setInterval(() => {
+            if (!this.isActive) {
+                clearInterval(clickInterval);
                 return;
             }
             
             this.incrementClickCounter();
             executed++;
             
-            // Log progress for longer sequences
-            if (clickCount > 5 && executed % Math.ceil(clickCount / 4) === 0) {
-                this.log(`Progress: ${executed}/${clickCount} clicks executed`, 'info');
-            }
-            
-            // Schedule next click if there are more to execute
-            if (executed < clickCount) {
-                setTimeout(executeClick, interval);
-            } else {
-                // This was the last click
-                this.log(`✓ DelayClick completed: ${executed}/${clickCount} clicks executed`, 'success');
+            if (executed >= clickCount) {
+                clearInterval(clickInterval);
+                this.log(`${clickCount} clicks executed`, 'success');
                 if (onComplete) onComplete();
             }
-        };
-        
-        // Start the first click immediately
-        executeClick();
-    }
-
-    simulateDelayClickExecution(clickCount, onComplete) {
-        // Legacy method - redirect to realistic version
-        this.simulateRealisticDelayClickExecution(clickCount, onComplete);
+        }, interval);
     }
 
     simulateManualTrigger() {
@@ -285,24 +245,20 @@ class AutoClickApp {
         const delayClicks = this.getDelayClicksData();
         let totalClicks = delayClicks.reduce((sum, dc) => sum + dc.count, 0);
         
-        this.log(`Executing manual sequence: ${totalClicks} total clicks across ${delayClicks.length} DelayClicks`, 'info');
+        this.log(`Executing manual sequence: ${totalClicks} total clicks`, 'info');
         
         let delayIndex = 0;
         
         const executeNextDelayClick = () => {
             if (delayIndex >= delayClicks.length) {
-                this.log('Manual click sequence completed', 'success');
+                this.log('Click sequence completed', 'success');
                 return;
             }
             
             const currentDelayClick = delayClicks[delayIndex];
-            this.log(`DelayClick ${delayIndex + 1}: Waiting ${currentDelayClick.delay}ms, then ${currentDelayClick.count} clicks`, 'info');
             
-            // Wait for delay, then execute clicks
             setTimeout(() => {
-                if (!this.isActive && delayIndex > 0) return; // Allow first execution even if stopped
-                
-                this.simulateRealisticDelayClickExecution(currentDelayClick.count, () => {
+                this.simulateDelayClickExecution(currentDelayClick.count, () => {
                     delayIndex++;
                     executeNextDelayClick();
                 });
