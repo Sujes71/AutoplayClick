@@ -13,6 +13,7 @@ class AutoClickApp {
         this.attachEventListeners(); // Attach after loading to prevent false triggers
         this.updateStatus('disconnected');
         this.detectActiveWindow(); // Auto-detect current window on startup
+        this.setInitialButtonStates(); // Set correct initial button states
         
         this.isLoading = false; // Now ready for normal operation
         
@@ -47,6 +48,15 @@ class AutoClickApp {
         console.log('Direct Click Button:', this.directClickBtn);
         console.log('Click Counter Display:', this.clickCounterDisplay);
         console.log('Detect Window Button:', this.detectWindowBtn);
+    }
+
+    setInitialButtonStates() {
+        // Initially, Start should be enabled and Stop should be disabled
+        if (this.startBtn) this.startBtn.disabled = false;
+        if (this.stopBtn) this.stopBtn.disabled = true;
+        
+        // Ensure we're not in active state initially
+        this.isActive = false;
     }
 
     attachEventListeners() {
