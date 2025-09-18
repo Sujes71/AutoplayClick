@@ -211,12 +211,12 @@ class AutoClickApp {
             const currentDelayClick = delayClicks[delayIndex];
             this.log(`Executing DelayClick ${delayIndex + 1}: ${currentDelayClick.count} clicks with ${currentDelayClick.delay}ms delay`, 'info');
             
-            // Wait for the delay
+            // Wait for the delay FIRST
             setTimeout(() => {
                 if (!this.isActive) return;
                 
-                // Simulate the clicks for this DelayClick
-                this.simulateDelayClickExecution(currentDelayClick.count, () => {
+                // Execute the exact number of clicks with proper interval
+                this.simulateRealisticDelayClickExecution(currentDelayClick.count, () => {
                     delayIndex = (delayIndex + 1) % delayClicks.length;
                     // If we return to the beginning, it's a complete cycle
                     if (delayIndex === 0) {
@@ -230,25 +230,54 @@ class AutoClickApp {
         executeDelayClickCycle();
     }
 
-    simulateDelayClickExecution(clickCount, onComplete) {
+    simulateRealisticDelayClickExecution(clickCount, onComplete) {
+        // If count is 0, skip execution
+        if (clickCount === 0) {
+            this.log(`DelayClick with 0 count - skipping execution`, 'info');
+            if (onComplete) onComplete();
+            return;
+        }
+        
         const interval = this.getActualInterval();
         let executed = 0;
         
-        const clickInterval = setInterval(() => {
-            if (!this.isActive) {
-                clearInterval(clickInterval);
+        const speedMode = this.speedModeSelect.value;
+        this.log(`Starting ${clickCount} clicks with ${interval}ms interval (${speedMode} mode)`, 'info');
+        
+        const executeClick = () => {
+            if (!this.isActive || executed >= clickCount) {
+                if (executed >= clickCount) {
+                    this.log(`✓ DelayClick completed: ${executed}/${clickCount} clicks executed`, 'success');
+                }
+                if (onComplete) onComplete();
                 return;
             }
             
             this.incrementClickCounter();
             executed++;
             
-            if (executed >= clickCount) {
-                clearInterval(clickInterval);
-                this.log(`${clickCount} clicks executed`, 'success');
+            // Log progress for longer sequences
+            if (clickCount > 5 && executed % Math.ceil(clickCount / 4) === 0) {
+                this.log(`Progress: ${executed}/${clickCount} clicks executed`, 'info');
+            }
+            
+            // Schedule next click if there are more to execute
+            if (executed < clickCount) {
+                setTimeout(executeClick, interval);
+            } else {
+                // This was the last click
+                this.log(`✓ DelayClick completed: ${executed}/${clickCount} clicks executed`, 'success');
                 if (onComplete) onComplete();
             }
-        }, interval);
+        };
+        
+        // Start the first click immediately
+        executeClick();
+    }
+
+    simulateDelayClickExecution(clickCount, onComplete) {
+        // Legacy method - redirect to realistic version
+        this.simulateRealisticDelayClickExecution(clickCount, onComplete);
     }
 
     simulateManualTrigger() {
@@ -256,20 +285,24 @@ class AutoClickApp {
         const delayClicks = this.getDelayClicksData();
         let totalClicks = delayClicks.reduce((sum, dc) => sum + dc.count, 0);
         
-        this.log(`Executing manual sequence: ${totalClicks} total clicks`, 'info');
+        this.log(`Executing manual sequence: ${totalClicks} total clicks across ${delayClicks.length} DelayClicks`, 'info');
         
         let delayIndex = 0;
         
         const executeNextDelayClick = () => {
             if (delayIndex >= delayClicks.length) {
-                this.log('Click sequence completed', 'success');
+                this.log('Manual click sequence completed', 'success');
                 return;
             }
             
             const currentDelayClick = delayClicks[delayIndex];
+            this.log(`DelayClick ${delayIndex + 1}: Waiting ${currentDelayClick.delay}ms, then ${currentDelayClick.count} clicks`, 'info');
             
+            // Wait for delay, then execute clicks
             setTimeout(() => {
-                this.simulateDelayClickExecution(currentDelayClick.count, () => {
+                if (!this.isActive && delayIndex > 0) return; // Allow first execution even if stopped
+                
+                this.simulateRealisticDelayClickExecution(currentDelayClick.count, () => {
                     delayIndex++;
                     executeNextDelayClick();
                 });
@@ -301,10 +334,13 @@ class AutoClickApp {
     updateClickCounterDisplay() {
         this.clickCounterDisplay.textContent = this.clickCounter.toLocaleString();
         
-        // Animate counter
+        // Animate counter with color flash for better visual feedback
         this.clickCounterDisplay.style.transform = 'scale(1.1)';
+        this.clickCounterDisplay.style.color = 'var(--yellow)';
+        
         setTimeout(() => {
             this.clickCounterDisplay.style.transform = 'scale(1)';
+            this.clickCounterDisplay.style.color = 'var(--cyan)';
         }, 150);
     }
 
