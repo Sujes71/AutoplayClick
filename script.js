@@ -86,9 +86,9 @@ class AutoClickApp {
             if (this.delayClicksContainer.children.length > 1) {
                 delayClickItem.remove();
                 this.saveConfiguration();
-                this.showToast('DelayClick eliminado', 'success');
+                this.showToast('DelayClick removed', 'success');
             } else {
-                this.showToast('Debe mantener al menos un DelayClick', 'warning');
+                this.showToast('Must keep at least one DelayClick', 'warning');
             }
         });
         
@@ -121,7 +121,7 @@ class AutoClickApp {
 
     async startAutoClick() {
         if (!this.windowTitleInput.value.trim()) {
-            this.showToast('Por favor, ingresa el título de la ventana', 'error');
+            this.showToast('Please enter the window title', 'error');
             return;
         }
 
@@ -134,7 +134,7 @@ class AutoClickApp {
         };
 
         try {
-            this.log('Iniciando AutoClick...', 'info');
+            this.log('Configuring AutoClick (listeners activated)...', 'info');
             this.updateStatus('connecting');
             
             const response = await fetch(`${this.API_BASE_URL}/autoclick/start`, {
@@ -150,17 +150,32 @@ class AutoClickApp {
                 this.updateStatus('connected');
                 this.startBtn.disabled = true;
                 this.stopBtn.disabled = false;
-                this.log('AutoClick iniciado correctamente', 'success');
-                this.showToast('AutoClick iniciado', 'success');
                 
-                // Simular contador de clicks para demostración
-                this.simulateClickCounting();
+                const mode = this.modeSelect.value;
+                let statusMessage = '';
+                
+                if (mode === 'KEY') {
+                    statusMessage = 'Press F1 to execute clicks, F3 to save coordinates';
+                } else if (mode === 'MOUSE') {
+                    statusMessage = 'Click with mouse to execute automatic clicks';
+                } else if (mode === 'AUTO') {
+                    statusMessage = 'Automatic mode started - executing clicks continuously';
+                    this.startAutomaticClickSimulation();
+                }
+                
+                this.log(`AutoClick configured: ${statusMessage}`, 'success');
+                this.showToast('Listeners activated', 'success');
+                
+                // Only simulate clicks if AUTO mode
+                if (mode === 'AUTO') {
+                    this.simulateAutomaticMode();
+                }
             } else {
-                throw new Error(`Error HTTP: ${response.status}`);
+                throw new Error(`HTTP Error: ${response.status}`);
             }
         } catch (error) {
-            this.log(`Error al iniciar AutoClick: ${error.message}`, 'error');
-            this.showToast('Error al conectar con la API', 'error');
+            this.log(`Error configuring AutoClick: ${error.message}`, 'error');
+            this.showToast('Error connecting to API', 'error');
             this.updateStatus('error');
         }
     }
@@ -170,19 +185,99 @@ class AutoClickApp {
         this.updateStatus('disconnected');
         this.startBtn.disabled = false;
         this.stopBtn.disabled = true;
-        this.log('AutoClick detenido', 'warning');
-        this.showToast('AutoClick detenido', 'warning');
+        this.log('AutoClick stopped - Listeners deactivated', 'warning');
+        this.showToast('AutoClick stopped', 'warning');
         
+        // Clear all intervals
         if (this.clickCountingInterval) {
             clearInterval(this.clickCountingInterval);
+            this.clickCountingInterval = null;
         }
     }
 
-    simulateClickCounting() {
+    simulateAutomaticMode() {
         if (this.clickCountingInterval) {
             clearInterval(this.clickCountingInterval);
         }
         
+        const delayClicks = this.getDelayClicksData();
+        let delayIndex = 0;
+        
+        const executeDelayClickCycle = () => {
+            if (!this.isActive) return;
+            
+            const currentDelayClick = delayClicks[delayIndex];
+            this.log(`Executing DelayClick ${delayIndex + 1}: ${currentDelayClick.count} clicks with ${currentDelayClick.delay}ms delay`, 'info');
+            
+            // Wait for the delay
+            setTimeout(() => {
+                if (!this.isActive) return;
+                
+                // Simulate the clicks for this DelayClick
+                this.simulateDelayClickExecution(currentDelayClick.count, () => {
+                    delayIndex = (delayIndex + 1) % delayClicks.length;
+                    // If we return to the beginning, it's a complete cycle
+                    if (delayIndex === 0) {
+                        this.log('DelayClicks cycle completed, restarting...', 'info');
+                    }
+                    executeDelayClickCycle();
+                });
+            }, currentDelayClick.delay);
+        };
+        
+        executeDelayClickCycle();
+    }
+
+    simulateDelayClickExecution(clickCount, onComplete) {
+        const interval = this.getActualInterval();
+        let executed = 0;
+        
+        const clickInterval = setInterval(() => {
+            if (!this.isActive) {
+                clearInterval(clickInterval);
+                return;
+            }
+            
+            this.incrementClickCounter();
+            executed++;
+            
+            if (executed >= clickCount) {
+                clearInterval(clickInterval);
+                this.log(`${clickCount} clicks executed`, 'success');
+                if (onComplete) onComplete();
+            }
+        }, interval);
+    }
+
+    simulateManualTrigger() {
+        // For KEY and MOUSE modes - simulate execution of all DelayClicks once
+        const delayClicks = this.getDelayClicksData();
+        let totalClicks = delayClicks.reduce((sum, dc) => sum + dc.count, 0);
+        
+        this.log(`Executing manual sequence: ${totalClicks} total clicks`, 'info');
+        
+        let delayIndex = 0;
+        
+        const executeNextDelayClick = () => {
+            if (delayIndex >= delayClicks.length) {
+                this.log('Click sequence completed', 'success');
+                return;
+            }
+            
+            const currentDelayClick = delayClicks[delayIndex];
+            
+            setTimeout(() => {
+                this.simulateDelayClickExecution(currentDelayClick.count, () => {
+                    delayIndex++;
+                    executeNextDelayClick();
+                });
+            }, currentDelayClick.delay);
+        };
+        
+        executeNextDelayClick();
+    }
+
+    getActualInterval() {
         const interval = parseInt(this.intervalInput.value) || 100;
         const mode = this.speedModeSelect.value;
         
@@ -193,11 +288,7 @@ class AutoClickApp {
             actualInterval = Math.max(1, interval / 1000000); // Nanoseconds to ms
         }
         
-        this.clickCountingInterval = setInterval(() => {
-            if (this.isActive) {
-                this.incrementClickCounter();
-            }
-        }, actualInterval);
+        return actualInterval;
     }
 
     incrementClickCounter() {
@@ -218,8 +309,8 @@ class AutoClickApp {
     resetCounter() {
         this.clickCounter = 0;
         this.updateClickCounterDisplay();
-        this.log('Contador reiniciado', 'info');
-        this.showToast('Contador reiniciado', 'info');
+        this.log('Counter reset', 'info');
+        this.showToast('Counter reset', 'info');
     }
 
     async runSpeedTest() {
@@ -228,8 +319,8 @@ class AutoClickApp {
         const mode = this.speedModeSelect.value;
         
         this.speedTestBtn.disabled = true;
-        this.speedTestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Probando...';
-        this.log(`Iniciando prueba de velocidad: ${testClicks} clicks`, 'info');
+        this.speedTestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        this.log(`Starting speed test: ${testClicks} clicks`, 'info');
         
         let actualInterval = interval;
         if (mode === 'MC') {
@@ -257,10 +348,10 @@ class AutoClickApp {
                 this.realIntervalDisplay.textContent = `${realInterval} ms`;
                 
                 this.speedTestBtn.disabled = false;
-                this.speedTestBtn.innerHTML = '<i class="fas fa-stopwatch"></i> Probar Velocidad';
+                this.speedTestBtn.innerHTML = '<i class="fas fa-stopwatch"></i> Test Speed';
                 
-                this.log(`Prueba completada: ${clicksPerSecond} clicks/s`, 'success');
-                this.showToast('Prueba de velocidad completada', 'success');
+                this.log(`Test completed: ${clicksPerSecond} clicks/s`, 'success');
+                this.showToast('Speed test completed', 'success');
             }
         }, actualInterval);
     }
@@ -274,16 +365,25 @@ class AutoClickApp {
         switch (status) {
             case 'connected':
                 statusDot.classList.add('connected');
-                statusText.textContent = 'Conectado';
+                const mode = this.modeSelect.value;
+                if (mode === 'KEY') {
+                    statusText.textContent = 'Ready (F1: clicks, F3: coords)';
+                } else if (mode === 'MOUSE') {
+                    statusText.textContent = 'Ready (Mouse click: execute)';
+                } else if (mode === 'AUTO') {
+                    statusText.textContent = 'Running automatic';
+                } else {
+                    statusText.textContent = 'Connected';
+                }
                 break;
             case 'connecting':
-                statusText.textContent = 'Conectando...';
+                statusText.textContent = 'Setting up listeners...';
                 break;
             case 'error':
-                statusText.textContent = 'Error';
+                statusText.textContent = 'Connection error';
                 break;
             default:
-                statusText.textContent = 'Desconectado';
+                statusText.textContent = 'Disconnected';
         }
     }
 
@@ -307,7 +407,7 @@ class AutoClickApp {
 
     clearLog() {
         this.logContainer.innerHTML = '';
-        this.showToast('Log limpiado', 'info');
+        this.showToast('Log cleared', 'info');
     }
 
     showToast(message, type = 'info') {
@@ -341,6 +441,13 @@ class AutoClickApp {
                 event.preventDefault();
                 if (!this.isActive) {
                     this.startAutoClick();
+                } else {
+                    // If already active and KEY mode, execute clicks
+                    const mode = this.modeSelect.value;
+                    if (mode === 'KEY') {
+                        this.log('F1 pressed - Executing click sequence', 'info');
+                        this.simulateManualTrigger();
+                    }
                 }
                 break;
             case 'F2':
@@ -351,8 +458,8 @@ class AutoClickApp {
                 break;
             case 'F3':
                 event.preventDefault();
-                this.log('Coordenadas guardadas (F3 presionado)', 'info');
-                this.showToast('Coordenadas guardadas', 'info');
+                this.log('F3 pressed - Mouse coordinates saved', 'success');
+                this.showToast('Coordinates saved', 'info');
                 break;
         }
     }
@@ -394,9 +501,9 @@ class AutoClickApp {
                     this.addInitialDelayClick();
                 }
                 
-                this.log('Configuración cargada', 'success');
+                this.log('Configuration loaded', 'success');
             } catch (error) {
-                this.log('Error al cargar configuración', 'error');
+                this.log('Error loading configuration', 'error');
                 this.addInitialDelayClick();
             }
         }
@@ -418,9 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.autoClickApp = new AutoClickApp();
     
     // Add some initial logs
-    window.autoClickApp.log('Aplicación inicializada', 'success');
-    window.autoClickApp.log('Configuración cargada desde localStorage', 'info');
-    window.autoClickApp.log('Listo para usar - Presiona F1 para iniciar, F2 para detener, F3 para guardar coordenadas', 'info');
+    window.autoClickApp.log('Application initialized', 'success');
+    window.autoClickApp.log('Configuration loaded from localStorage', 'info');
+    window.autoClickApp.log('Ready to use - Press F1 to start (KEY mode), F2 to stop, F3 to save coordinates', 'info');
 });
 
 // Handle page unload
