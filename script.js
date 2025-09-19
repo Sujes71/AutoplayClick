@@ -207,26 +207,10 @@ class AutoClickApp {
     }
 
     simulateClickCounting() {
-        if (this.clickCountingInterval) {
-            clearInterval(this.clickCountingInterval);
-        }
-        
-        const actualInterval = this.getActualInterval();
-        const mode = this.speedModeSelect.value;
-        
-        // Use different timing strategies based on speed
-        if (actualInterval < 4) {
-            // For very fast intervals, use high-precision timing
-            this.usePrecisionTiming(actualInterval);
-        } else {
-            // For normal intervals, use standard setTimeout
-            this.clickCountingInterval = setInterval(() => {
-                if (this.isActive) {
-                    this.incrementClickCounter();
-                }
-            }, actualInterval);
-        }
-        
+        // Counter is now independent of API simulation
+        // This function is kept for potential future features
+        // but no longer affects the click counter
+        console.log('API simulation started (counter independent)');
     }
 
     warnAboutTimingLimitations() {
@@ -243,50 +227,25 @@ class AutoClickApp {
     }
 
     usePrecisionTiming(targetInterval) {
-        let lastTime = performance.now();
-        const tick = () => {
-            if (!this.isActive) return;
-            
-            const currentTime = performance.now();
-            const elapsed = currentTime - lastTime;
-            
-            if (elapsed >= targetInterval) {
-                this.incrementClickCounter();
-                lastTime = currentTime;
-            }
-            
-            // Use requestAnimationFrame for smoother timing
-            requestAnimationFrame(tick);
-        };
-        
-        requestAnimationFrame(tick);
+        // Counter is now independent of API simulation
+        // This function is kept for potential future features
+        console.log('Precision timing setup (counter independent)');
     }
 
     simulateDelayClickExecution(clickCount, onComplete) {
-        const interval = this.getActualInterval();
-        let executed = 0;
-        
-        const clickInterval = setInterval(() => {
-            if (!this.isActive) {
-                clearInterval(clickInterval);
-                return;
-            }
-            
-            this.incrementClickCounter();
-            executed++;
-            
-            if (executed >= clickCount) {
-                clearInterval(clickInterval);
-                if (onComplete) onComplete();
-            }
-        }, interval);
+        // Counter is now independent of API simulation
+        // This function is kept for API functionality only
+        console.log(`API simulation for ${clickCount} clicks (counter independent)`);
+        if (onComplete) onComplete();
     }
 
     simulateManualTrigger() {
-        // For KEY and MOUSE modes - simulate execution of all DelayClicks once
+        // For KEY and MOUSE modes - API functionality only
+        // Counter is now independent of API simulation
         const delayClicks = this.getDelayClicksData();
         let totalClicks = delayClicks.reduce((sum, dc) => sum + dc.count, 0);
         
+        console.log(`API manual trigger for ${totalClicks} clicks (counter independent)`);
         
         let delayIndex = 0;
         
@@ -376,58 +335,25 @@ class AutoClickApp {
         this.showToast('Counter reset', 'info');
     }
 
-    async executeDirectClick() {
-        console.log('executeDirectClick called');
+    executeDirectClick() {
+        console.log('executeDirectClick called - Simple counter increment only');
         console.log('directClickBtn element:', this.directClickBtn);
         console.log('clickCounter before increment:', this.clickCounter);
         
-        try {
-            if (this.directClickBtn) {
-                this.directClickBtn.disabled = true;
-                this.directClickBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
-            }
-            
-            // Always increment counter for UI feedback
-            this.incrementClickCounter();
-            console.log('clickCounter after increment:', this.clickCounter);
-            
-            const autoClickData = {
-                title: this.windowTitleInput.value.trim() || "Default Window",
-                mode: this.modeSelect.value,
-                interval: parseInt(this.intervalInput.value) || 100,
-                speedMode: this.speedModeSelect.value,
-                delayClicks: this.getDelayClicksData()
-            };
-
-            try {
-                const response = await fetch(`${this.API_BASE_URL}/autoclick/start`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(autoClickData)
-                });
-
-                if (response.ok) {
-                    this.updateStatus('connected');
-                    this.showToast('Click executed successfully via API', 'success');
-                } else {
-                    this.updateStatus('error');
-                    this.showToast('API call failed, but click counted', 'warning');
-                }
-            } catch (apiError) {
-                // API not available, but still count the click
-                this.updateStatus('error');
-                this.showToast('API not available, click counted locally', 'warning');
-            }
-            
-        } catch (error) {
-            console.error('Error executing click:', error);
-            this.showToast('Error in click execution', 'error');
-        } finally {
-            this.directClickBtn.disabled = false;
-            this.directClickBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i> Execute Click Now';
+        // Simple counter increment - completely independent of API
+        this.incrementClickCounter();
+        console.log('clickCounter after increment:', this.clickCounter);
+        
+        // Visual feedback for button press
+        if (this.directClickBtn) {
+            this.directClickBtn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.directClickBtn.style.transform = 'scale(1)';
+            }, 100);
         }
+        
+        // Show simple feedback toast
+        this.showToast(`Click counted! Total: ${this.clickCounter}`, 'success');
     }
 
     async detectActiveWindow() {
