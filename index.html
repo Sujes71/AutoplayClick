@@ -86,9 +86,15 @@
                 
                 <!-- Click Counter -->
                 <div class="click-counter">
-                    <div class="counter-display">
-                        <span class="counter-number" id="clickCounter">0</span>
-                        <span class="counter-label">Clicks Executed</span>
+                    <div class="counter-stats">
+                        <div class="counter-display">
+                            <span class="counter-number" id="clickCounter">0</span>
+                            <span class="counter-label">Total Clicks</span>
+                        </div>
+                        <div class="cps-display">
+                            <span class="cps-number" id="cpsCounter">0.0</span>
+                            <span class="cps-label">Clicks/sec</span>
+                        </div>
                     </div>
                     <button class="btn btn-warning reset-btn" id="resetCounter">
                         <i class="fas fa-undo"></i> Reset
@@ -134,13 +140,16 @@
             
             <div class="shortcuts">
                 <div class="shortcut">
-                    <kbd>F1</kbd> <span>Execute clicks (KEY mode only)</span>
+                    <kbd>Ctrl+1</kbd> <span>Execute clicks (KEY mode only)</span>
                 </div>
                 <div class="shortcut">
-                    <kbd>F2</kbd> <span>Stop AutoClick (all modes)</span>
+                    <kbd>Ctrl+2</kbd> <span>Stop AutoClick (all modes)</span>
                 </div>
                 <div class="shortcut">
-                    <kbd>F3</kbd> <span>Save coordinates</span>
+                    <kbd>Ctrl+3</kbd> <span>Save coordinates</span>
+                </div>
+                <div class="shortcut">
+                    <kbd>Space</kbd> <span>Direct click & count</span>
                 </div>
             </div>
         </div>

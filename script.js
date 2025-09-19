@@ -5,6 +5,14 @@ class AutoClickApp {
         this.isActive = false;
         this.delayClicks = [];
 
+        // CPS tracking variables
+        this.cpsStartTime = null;
+        this.cpsInterval = null;
+        this.currentCps = 0;
+        this.lastClickTime = null;
+        this.inactivityTimeout = null;
+        this.INACTIVITY_LIMIT = 5000; // 5 segundos en milisegundos
+
         this.isLoading = true; // Flag to prevent auto-stop during initialization
         
         this.initializeElements();
@@ -40,6 +48,7 @@ class AutoClickApp {
         
         // Display elements
         this.clickCounterDisplay = document.getElementById('clickCounter');
+        this.cpsCounterDisplay = document.getElementById('cpsCounter');
         this.statusIndicator = document.getElementById('statusIndicator');
         this.delayClicksContainer = document.getElementById('delayClicksContainer');
         this.toastContainer = document.getElementById('toastContainer');
@@ -47,6 +56,7 @@ class AutoClickApp {
         // Debug: Check if critical elements exist
         console.log('Direct Click Button:', this.directClickBtn);
         console.log('Click Counter Display:', this.clickCounterDisplay);
+        console.log('CPS Counter Display:', this.cpsCounterDisplay);
         console.log('Detect Window Button:', this.detectWindowBtn);
     }
 
@@ -285,6 +295,18 @@ class AutoClickApp {
 
     incrementClickCounter() {
         console.log('incrementClickCounter called, current value:', this.clickCounter);
+        
+        // Actualizar tiempo del último click
+        this.lastClickTime = Date.now();
+        
+        // Iniciar CPS tracking en el primer click
+        if (this.clickCounter === 0) {
+            this.startCpsTracking();
+        }
+        
+        // Resetear el timeout de inactividad
+        this.resetInactivityTimeout();
+        
         this.clickCounter++;
         console.log('incremented to:', this.clickCounter);
         console.log('clickCounterDisplay element:', this.clickCounterDisplay);
@@ -331,8 +353,103 @@ class AutoClickApp {
 
     resetCounter() {
         this.clickCounter = 0;
+        this.stopCpsTracking();
         this.updateClickCounterDisplay();
+        this.updateCpsDisplay(0);
         this.showToast('Counter reset', 'info');
+    }
+
+    startCpsTracking() {
+        console.log('Starting CPS tracking...');
+        this.cpsStartTime = Date.now();
+        this.currentCps = 0;
+        
+        // Actualizar CPS cada segundo
+        this.cpsInterval = setInterval(() => {
+            this.calculateAndUpdateCps();
+        }, 1000);
+    }
+
+    stopCpsTracking() {
+        console.log('Stopping CPS tracking...');
+        if (this.cpsInterval) {
+            clearInterval(this.cpsInterval);
+            this.cpsInterval = null;
+        }
+        this.clearInactivityTimeout();
+        this.cpsStartTime = null;
+        this.currentCps = 0;
+        this.lastClickTime = null;
+    }
+
+    calculateAndUpdateCps() {
+        if (!this.cpsStartTime || this.clickCounter === 0) {
+            this.currentCps = 0;
+        } else {
+            // Verificar si han pasado más de 5 segundos desde el último click
+            if (this.lastClickTime && (Date.now() - this.lastClickTime) >= this.INACTIVITY_LIMIT) {
+                console.log('Inactivity detected during CPS calculation');
+                this.handleInactivity();
+                return; // No actualizar CPS, ya se ha reseteado
+            }
+            
+            const timeElapsed = (Date.now() - this.cpsStartTime) / 1000; // segundos
+            this.currentCps = this.clickCounter / timeElapsed;
+        }
+        
+        console.log('CPS calculated:', this.currentCps.toFixed(1));
+        this.updateCpsDisplay(this.currentCps);
+    }
+
+    updateCpsDisplay(cps) {
+        if (this.cpsCounterDisplay) {
+            this.cpsCounterDisplay.textContent = cps.toFixed(1);
+            
+            // Animate CPS with color flash for better visual feedback
+            this.cpsCounterDisplay.style.transform = 'scale(1.05)';
+            this.cpsCounterDisplay.style.color = 'var(--yellow)';
+            
+            setTimeout(() => {
+                this.cpsCounterDisplay.style.transform = 'scale(1)';
+                this.cpsCounterDisplay.style.color = 'var(--green)';
+            }, 200);
+        } else {
+            console.log('cpsCounterDisplay element not found!');
+        }
+    }
+
+    resetInactivityTimeout() {
+        // Limpiar timeout anterior si existe
+        if (this.inactivityTimeout) {
+            clearTimeout(this.inactivityTimeout);
+        }
+        
+        // Configurar nuevo timeout de 5 segundos
+        this.inactivityTimeout = setTimeout(() => {
+            console.log('5 segundos sin clicks - reseteando CPS');
+            this.handleInactivity();
+        }, this.INACTIVITY_LIMIT);
+    }
+
+    handleInactivity() {
+        console.log('Handling inactivity - resetting counter and stopping CPS tracking');
+        
+        // Resetear contador total de clicks
+        this.clickCounter = 0;
+        this.updateClickCounterDisplay();
+        
+        // Resetear CPS
+        this.stopCpsTracking();
+        this.updateCpsDisplay(0);
+        
+        this.showToast('Counter and CPS reset due to inactivity (5s)', 'info');
+    }
+
+    clearInactivityTimeout() {
+        if (this.inactivityTimeout) {
+            clearTimeout(this.inactivityTimeout);
+            this.inactivityTimeout = null;
+        }
     }
 
     executeDirectClick() {
@@ -578,6 +695,15 @@ class AutoClickApp {
                 
                 this.updateClickCounterDisplay();
                 
+                // Si hay clicks guardados, inicializar CPS tracking
+                if (this.clickCounter > 0) {
+                    this.startCpsTracking();
+                    // Iniciar el timeout de inactividad desde el principio
+                    this.resetInactivityTimeout();
+                } else {
+                    this.updateCpsDisplay(0);
+                }
+                
                 // Clear existing delay clicks and load saved ones
                 this.delayClicksContainer.innerHTML = '';
                 if (config.delayClicks && config.delayClicks.length > 0) {
@@ -590,7 +716,10 @@ class AutoClickApp {
                 
             } catch (error) {
                 this.addInitialDelayClick();
+                this.updateCpsDisplay(0);
             }
+        } else {
+            this.updateCpsDisplay(0);
         }
     }
 
@@ -602,6 +731,7 @@ class AutoClickApp {
         if (this.clickCountingInterval) {
             clearInterval(this.clickCountingInterval);
         }
+        this.stopCpsTracking();
     }
 }
 

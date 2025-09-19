@@ -267,7 +267,13 @@ input:focus, select:focus {
     border: 1px solid var(--base01);
 }
 
-.counter-display {
+.counter-stats {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.counter-display, .cps-display {
     text-align: center;
 }
 
@@ -281,6 +287,18 @@ input:focus, select:focus {
 .counter-label {
     color: var(--base0);
     font-size: 0.9rem;
+}
+
+.cps-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--green);
+}
+
+.cps-label {
+    color: var(--base0);
+    font-size: 0.8rem;
 }
 
 .direct-click-controls {
