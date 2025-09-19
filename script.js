@@ -393,7 +393,7 @@ class AutoClickApp {
             
             const autoClickData = {
                 title: this.windowTitleInput.value.trim() || "Default Window",
-                mode: "MANUAL", // Always manual for direct clicks
+                mode: this.modeSelect.value,
                 interval: parseInt(this.intervalInput.value) || 100,
                 speedMode: this.speedModeSelect.value,
                 delayClicks: this.getDelayClicksData()
