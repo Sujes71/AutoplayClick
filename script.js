@@ -296,7 +296,7 @@ class AutoClickApp {
     incrementClickCounter() {
         console.log('incrementClickCounter called, current value:', this.clickCounter);
         
-        const now = performance.now();
+        const now = Date.now(); // Usar Date.now() para mayor estabilidad
         
         // Agregar timestamp del click actual
         this.clickTimestamps.push(now);
@@ -385,10 +385,11 @@ class AutoClickApp {
         // Promedio de los 2 intervalos
         const avgInterval = (interval1 + interval2) / 2;
         
-        // Convertir a clicks por segundo
-        this.currentCps = avgInterval > 0 ? 1000 / avgInterval : 0;
+        // Convertir a clicks por segundo y redondear para mayor estabilidad
+        const rawCps = avgInterval > 0 ? 1000 / avgInterval : 0;
+        this.currentCps = Math.round(rawCps * 10) / 10; // Redondear a 1 decimal
         
-        console.log('Last 3 clicks intervals:', interval1.toFixed(2), interval2.toFixed(2), 'ms, Avg:', avgInterval.toFixed(2), 'ms, CPS:', this.currentCps.toFixed(1));
+        console.log('Last 3 clicks intervals:', interval1.toFixed(0), interval2.toFixed(0), 'ms, Avg:', avgInterval.toFixed(0), 'ms, CPS:', this.currentCps.toFixed(1));
         this.updateCpsDisplay(this.currentCps);
     }
 
