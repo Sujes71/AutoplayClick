@@ -5,13 +5,13 @@ class AutoClickApp {
         this.isActive = false;
         this.delayClicks = [];
 
-        // CPS tracking variables
-        this.cpsStartTime = null;
-        this.cpsInterval = null;
+        // CPS tracking variables - basado en tiempo entre clicks
+        this.lastClickTimestamp = null;
+        this.clickTimestamps = [];
         this.currentCps = 0;
-        this.lastClickTime = null;
         this.inactivityTimeout = null;
         this.INACTIVITY_LIMIT = 5000; // 5 segundos en milisegundos
+        this.CPS_WINDOW_SIZE = 3; // Siempre usar los últimos 3 clicks
 
         this.isLoading = true; // Flag to prevent auto-stop during initialization
         
@@ -296,21 +296,27 @@ class AutoClickApp {
     incrementClickCounter() {
         console.log('incrementClickCounter called, current value:', this.clickCounter);
         
-        // Actualizar tiempo del último click
-        this.lastClickTime = Date.now();
+        const now = performance.now();
         
-        // Iniciar CPS tracking en el primer click
-        if (this.clickCounter === 0) {
-            this.startCpsTracking();
+        // Agregar timestamp del click actual
+        this.clickTimestamps.push(now);
+        
+        // Mantener solo los últimos 3 clicks para el cálculo
+        if (this.clickTimestamps.length > this.CPS_WINDOW_SIZE) {
+            this.clickTimestamps.shift();
         }
+        
+        // Calcular CPS basado en tiempo entre clicks
+        this.calculateCpsFromClickInterval();
         
         // Resetear el timeout de inactividad
         this.resetInactivityTimeout();
         
         this.clickCounter++;
         console.log('incremented to:', this.clickCounter);
-        console.log('clickCounterDisplay element:', this.clickCounterDisplay);
         this.updateClickCounterDisplay();
+        
+        this.lastClickTimestamp = now;
     }
 
     trackTimingPrecision() {
@@ -359,47 +365,42 @@ class AutoClickApp {
         this.showToast('Counter reset', 'info');
     }
 
-    startCpsTracking() {
-        console.log('Starting CPS tracking...');
-        this.cpsStartTime = Date.now();
-        this.currentCps = 0;
+    calculateCpsFromClickInterval() {
+        console.log('Calculating CPS from last 3 clicks...');
         
-        // Actualizar CPS cada segundo
-        this.cpsInterval = setInterval(() => {
-            this.calculateAndUpdateCps();
-        }, 1000);
+        // Necesitamos exactamente 3 clicks para calcular
+        if (this.clickTimestamps.length < 3) {
+            this.currentCps = 0;
+            this.updateCpsDisplay(0);
+            return;
+        }
+        
+        // Usar solo los últimos 3 clicks
+        const last3 = this.clickTimestamps.slice(-3);
+        
+        // Calcular los 2 intervalos entre los 3 clicks
+        const interval1 = last3[1] - last3[0];
+        const interval2 = last3[2] - last3[1];
+        
+        // Promedio de los 2 intervalos
+        const avgInterval = (interval1 + interval2) / 2;
+        
+        // Convertir a clicks por segundo
+        this.currentCps = avgInterval > 0 ? 1000 / avgInterval : 0;
+        
+        console.log('Last 3 clicks intervals:', interval1.toFixed(2), interval2.toFixed(2), 'ms, Avg:', avgInterval.toFixed(2), 'ms, CPS:', this.currentCps.toFixed(1));
+        this.updateCpsDisplay(this.currentCps);
     }
 
     stopCpsTracking() {
         console.log('Stopping CPS tracking...');
-        if (this.cpsInterval) {
-            clearInterval(this.cpsInterval);
-            this.cpsInterval = null;
-        }
         this.clearInactivityTimeout();
-        this.cpsStartTime = null;
+        this.clickTimestamps = [];
         this.currentCps = 0;
-        this.lastClickTime = null;
+        this.lastClickTimestamp = null;
     }
 
-    calculateAndUpdateCps() {
-        if (!this.cpsStartTime || this.clickCounter === 0) {
-            this.currentCps = 0;
-        } else {
-            // Verificar si han pasado más de 5 segundos desde el último click
-            if (this.lastClickTime && (Date.now() - this.lastClickTime) >= this.INACTIVITY_LIMIT) {
-                console.log('Inactivity detected during CPS calculation');
-                this.handleInactivity();
-                return; // No actualizar CPS, ya se ha reseteado
-            }
-            
-            const timeElapsed = (Date.now() - this.cpsStartTime) / 1000; // segundos
-            this.currentCps = this.clickCounter / timeElapsed;
-        }
-        
-        console.log('CPS calculated:', this.currentCps.toFixed(1));
-        this.updateCpsDisplay(this.currentCps);
-    }
+
 
     updateCpsDisplay(cps) {
         if (this.cpsCounterDisplay) {
@@ -695,14 +696,13 @@ class AutoClickApp {
                 
                 this.updateClickCounterDisplay();
                 
-                // Si hay clicks guardados, inicializar CPS tracking
+                // Si hay clicks guardados, inicializar timeout de inactividad
                 if (this.clickCounter > 0) {
-                    this.startCpsTracking();
                     // Iniciar el timeout de inactividad desde el principio
                     this.resetInactivityTimeout();
-                } else {
-                    this.updateCpsDisplay(0);
                 }
+                // Siempre mostrar CPS en 0.0 al cargar (se calculará con nuevos clicks)
+                this.updateCpsDisplay(0);
                 
                 // Clear existing delay clicks and load saved ones
                 this.delayClicksContainer.innerHTML = '';
